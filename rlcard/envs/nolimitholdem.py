@@ -35,12 +35,8 @@ class NolimitholdemEnv(Env):
             self.card2index = json.load(file)
 
     def _get_legal_actions(self):
-        ''' Get all leagal actions
-
-        Returns:
-            encoded_action_list (list): return encoded legal action list (from str to int)
-        '''
-        return self.game.get_legal_actions()
+        # Return list of ints for legal actions, matching the Action enum values
+        return [action.value for action in self.game.get_legal_actions()]
 
     def _extract_state(self, state):
         ''' Extract the state representation from state dictionary for agent
@@ -55,7 +51,7 @@ class NolimitholdemEnv(Env):
         '''
         extracted_state = {}
 
-        legal_actions = OrderedDict({action.value: None for action in state['legal_actions']})
+        legal_actions = OrderedDict({action: None for action in state['legal_actions']})
         extracted_state['legal_actions'] = legal_actions
 
         public_cards = state['public_cards']
@@ -93,15 +89,18 @@ class NolimitholdemEnv(Env):
         Returns:
             action (str): action for the game
         '''
-        legal_actions = self.game.get_legal_actions()
-        if self.actions(action_id) not in legal_actions:
-            if Action.CHECK in legal_actions:
-                return Action.CHECK
+        legal_actions = [a for a in self.game.get_legal_actions()]
+        if action_id not in legal_actions:
+            # If illegal, default to CHECK if allowed, else FOLD
+            if Action.CHECK.value in legal_actions:
+                return Action.CHECK.value
+            elif Action.CALL.value in legal_actions:
+                return Action.CALL.value
             else:
-                print("Tried non legal action", action_id, self.actions(action_id), legal_actions)
-                return Action.FOLD
-        return self.actions(action_id)
-
+                print("Tried non-legal action", action_id, legal_actions)
+                return Action.FOLD.value
+        return action_id
+        
     def get_perfect_information(self):
         ''' Get the perfect information of the current state
 

@@ -31,8 +31,11 @@ class Hand:
         '''
         Sort all the seven cards ascendingly according to RANK_LOOKUP
         '''
+        #self.all_cards = sorted(
+        #    self.all_cards, key=lambda card: self.RANK_LOOKUP.index(card[1]))
         self.all_cards = sorted(
-            self.all_cards, key=lambda card: self.RANK_LOOKUP.index(card[1]))
+            self.all_cards, key=lambda card: self.RANK_LOOKUP.index(card.rank))
+
 
     def evaluateHand(self):
         """
@@ -113,12 +116,12 @@ class Hand:
         Returns:
             (list): the flush cards
         '''
-        card_string = ''.join(self.all_cards)
+        card_string = ''.join(str(card) for card in self.all_cards)
         for suit in self.SUIT_LOOKUP:
             suit_count = card_string.count(suit)
             if suit_count >= 5:
                 flush_cards = [
-                    card for card in self.all_cards if card[0] == suit]
+                    card for card in self.all_cards if card.suit == suit]
                 return flush_cards
         return []
 
@@ -159,7 +162,7 @@ class Hand:
         different_rank_list = []
         different_rank_list.append(all_cards[0])
         for card in all_cards:
-            if(card[1] != different_rank_list[-1][1]):
+            if(card.rank != different_rank_list[-1].rank):
                 different_rank_list.append(card)
         return different_rank_list
 
@@ -169,10 +172,10 @@ class Hand:
         Returns:
             (list): the straight cards
         '''
-        ranks = [self.STRING_TO_RANK[c[1]] for c in Cards]
+        ranks = [self.STRING_TO_RANK[c.rank] for c in Cards]
 
         highest_card = Cards[-1]
-        if highest_card[1] == 'A':
+        if highest_card.rank == 'A':
             Cards.insert(0, highest_card)
             ranks.insert(0, 1)
 
@@ -198,7 +201,7 @@ class Hand:
         current_rank = 0
 
         for card in all_cards:
-            rank = self.RANK_LOOKUP.index(card[1])
+            rank = self.RANK_LOOKUP.index(card.rank)
             if rank == current_rank:
                 count += 1
                 card_group_element.append(card)
@@ -428,16 +431,16 @@ def compare_ranks(position, hands, winner):
     for i, hand in enumerate(hands):
         if winner[i]:
             cards = hands[i].get_hand_five_cards()
-            if len(cards[0]) != 1:# remove suit
-                for p in range(5):
-                    cards[p] = cards[p][1:]
+            #if len(cards[0]) != 1:# remove suit
+            #    for p in range(5):
+            #        cards[p] = cards[p][1:]
             cards_figure_all_players[i] = cards
 
     rival_ranks = [] # ranks of rival_figures
     for i, cards_figure in enumerate(cards_figure_all_players):
         if winner[i]:
             rank = cards_figure_all_players[i][position]
-            rival_ranks.append(RANKS.index(rank))
+            rival_ranks.append(RANKS.index(rank.rank))
         else:
             rival_ranks.append(-1)  # player has already lost
     new_winner = list(winner)
@@ -489,7 +492,7 @@ def determine_winner_straight(hands, all_players, potential_winner_index):
     '''
     highest_ranks = []
     for hand in hands:
-        highest_rank = hand.STRING_TO_RANK[hand.best_five[-1][1]]  # cards are sorted in ascending order
+        highest_rank = hand.STRING_TO_RANK[hand.best_five[-1].rank]  # cards are sorted in ascending order
         highest_ranks.append(highest_rank)
     max_highest_rank = max(highest_ranks)
     for i_player in range(len(highest_ranks)):
@@ -514,8 +517,8 @@ def determine_winner_four_of_a_kind(hands, all_players, potential_winner_index):
     '''
     ranks = []
     for hand in hands:
-        rank_1 = hand.STRING_TO_RANK[hand.best_five[-1][1]]  # rank of the four of a kind
-        rank_2 = hand.STRING_TO_RANK[hand.best_five[0][1]]  # rank of the kicker
+        rank_1 = hand.STRING_TO_RANK[hand.best_five[-1].rank]  # rank of the four of a kind
+        rank_2 = hand.STRING_TO_RANK[hand.best_five[0].rank]  # rank of the kicker
         ranks.append((rank_1, rank_2))
     max_rank = max(ranks)
     for i, rank in enumerate(ranks):

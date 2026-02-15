@@ -92,7 +92,7 @@ class NolimitholdemGame(Game):
         # be passed to the round for processing.
         self.round = Round(self.num_players, self.big_blind, dealer=self.dealer, np_random=self.np_random)
 
-        self.round.start_new_round(game_pointer=self.game_pointer, raised=[p.in_chips for p in self.players])
+        self.round.start_new_round(game_pointer=self.game_pointer, players=self.players, raised=[p.in_chips for p in self.players])
 
         # Count the round. There are 4 rounds in each game.
         self.round_counter = 0
@@ -181,7 +181,7 @@ class NolimitholdemGame(Game):
                     self.round_counter += 1
 
             self.round_counter += 1
-            self.round.start_new_round(self.game_pointer)
+            self.round.start_new_round(self.game_pointer, self.players)
 
         state = self.get_state(self.game_pointer)
 

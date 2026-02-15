@@ -1,4 +1,6 @@
 from rlcard.games.limitholdem.utils import compare_hands
+from rlcard.games.limitholdem.player import PlayerStatus
+
 import numpy as np
 
 
@@ -11,34 +13,67 @@ class LimitHoldemJudger:
     def judge_game(self, players, hands):
         """
         Judge the winner of the game.
-
         Args:
             players (list): The list of players who play the game
             hands (list): The list of hands that from the players
-
         Returns:
             (list): Each entry of the list corresponds to one entry of the
         """
-        # Convert the hands into card indexes
-        hands = [[card.get_index() for card in hand] if hand is not None else None for hand in hands]
-        
+        # Only consider ALIVE/ALLIN for showdown
+        valid_statuses = (PlayerStatus.ALIVE, PlayerStatus.ALLIN)
+        # Mask: True for active, False for busted/folded
+        mask = [(p.status in valid_statuses) and (hand is not None) for p, hand in zip(players, hands)]
+        # Subset for showdown (keep as Card objects)
+        hands_showdown = [hand for hand, m in zip(hands, mask) if m]
         in_chips = [p.in_chips for p in players]
+        payoffs = [0] * len(players)
+
         remaining = sum(in_chips)
-        payoffs = [0] * len(hands)
-        while remaining > 0:
-            winners = compare_hands(hands)
+        # Track which hands have been paid out
+        hands_done = [not m for m in mask]  # True if already paid or never in showdown
+
+        while remaining > 0 and any(mask):
+            # Only active hands for showdown
+            actives = [hand for hand, done in zip(hands, hands_done) if not done]
+            if not actives or all(x is None for x in actives):
+                break  # Defensive: if all hands are done, exit loop
+                
+            valid_hands = [hand for hand in actives if hand is not None and len(hand) == 7]
+            if valid_hands:
+                winners_showdown = compare_hands(valid_hands)
+            else:
+                #print("No valid hands")
+                #for player in players:
+                #    print(player.status)
+                #print(hands)
+                # Only one player should be ALIVE or ALLIN: award them the whole pot
+                alive_indices = [i for i, p in enumerate(players) if p.status in (PlayerStatus.ALIVE, PlayerStatus.ALLIN)]
+                payoffs = [0 for _ in players]
+                if len(alive_indices) == 1:
+                    #print("Only one player alive")
+                    payoffs[alive_indices[0]] = sum(p.in_chips for p in players)
+                   
+                return payoffs
+            # Map winners_showdown (len N_actives) back to N_players
+            winners = [0] * len(players)
+            j = 0
+            for i, done in enumerate(hands_done):
+                if not done:
+                    winners[i] = winners_showdown[j]
+                    j += 1
             each_win = self.split_pots_among_players(in_chips, winners)
-            
             for i in range(len(players)):
                 if winners[i]:
                     remaining -= each_win[i]
                     payoffs[i] += each_win[i] - in_chips[i]
-                    hands[i] = None
                     in_chips[i] = 0
+                    hands_done[i] = True  # Mark as done
                 elif in_chips[i] > 0:
                     payoffs[i] += each_win[i] - in_chips[i]
                     in_chips[i] = each_win[i]
-                    
+            # After a payout, recompute mask to skip done hands
+            mask = [not done for done in hands_done]
+
         assert sum(payoffs) == 0
         return payoffs
 
@@ -46,11 +81,9 @@ class LimitHoldemJudger:
         """
         Splits the next (side) pot among players.
         Function is called in loop by distribute_pots_among_players until all chips are allocated.
-
         Args:
             in_chips (list): List with number of chips bet not yet distributed for each player
             winners (list): List with 1 if the player is among winners else 0
-
         Returns:
             (list): Of how much chips each player get after this pot has been split and list of chips left to distribute
         """
@@ -87,11 +120,9 @@ class LimitHoldemJudger:
     def split_pots_among_players(self, in_chips_initial, winners):
         """
         Splits main pot and side pots among players (to handle special case of all-in players).
-
         Args:
             in_chips_initial (list): List with number of chips bet for each player
             winners (list): List with 1 if the player is among winners else 0
-
         Returns:
             (list): List of how much chips each player get back after all pots have been split
         """

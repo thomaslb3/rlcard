@@ -5,6 +5,7 @@ from rlcard.games.limitholdem import Dealer
 from rlcard.games.limitholdem import Player, PlayerStatus
 from rlcard.games.limitholdem import Judger
 from rlcard.games.limitholdem import Round
+#from rlcard.games.nolimitholdem.round import Action
 
 
 class LimitHoldemGame:
@@ -87,7 +88,7 @@ class LimitHoldemGame:
                            num_players=self.num_players,
                            np_random=self.np_random)
 
-        self.round.start_new_round(game_pointer=self.game_pointer, raised=[p.in_chips for p in self.players])
+        self.round.start_new_round(game_pointer=self.game_pointer, players=self.players, raised=[p.in_chips for p in self.players])
 
         # Count the round. There are 4 rounds in each game.
         self.round_counter = 0
@@ -149,7 +150,7 @@ class LimitHoldemGame:
                 self.round.raise_amount = 2 * self.raise_amount
 
             self.round_counter += 1
-            self.round.start_new_round(self.game_pointer)
+            self.round.start_new_round(self.game_pointer, self.players)
 
         state = self.get_state(self.game_pointer)
 
@@ -185,7 +186,7 @@ class LimitHoldemGame:
         Returns:
             (int): The number of actions. There are 4 actions (call, raise, check and fold)
         """
-        return 4
+        return len(Action)
 
     def get_player_id(self):
         """
@@ -249,4 +250,4 @@ class LimitHoldemGame:
         Returns:
             (list): A list of legal actions
         """
-        return self.round.get_legal_actions()
+        return self.round.get_nolimit_legal_actions(self.players)
